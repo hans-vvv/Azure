@@ -30,13 +30,13 @@ azw.create_linux_test_vm('VM-1', nic)
 nic = azw.create_nic('VM-2-NIC-1', 'SUB-2', '10.10.1.4')
 azw.create_linux_test_vm('VM-2', nic)
 
-# # Create Application Security Groups
-# azw.create_asg('ASG-VM-1')
-# azw.create_asg('ASG-VM-2')
-#
-# # Associate VM NICs with Application Security groups
-# azw.associate_nic_with_asg('ASG-VM-1', 'VM-1-NIC-1')
-# azw.associate_nic_with_asg('ASG-VM-2', 'VM-2-NIC-1')
+# Create Application Security Groups
+azw.create_asg('ASG-VM-1')
+azw.create_asg('ASG-VM-2')
+
+# Associate VM NICs with Application Security groups
+azw.associate_nic_with_asg('ASG-VM-1', 'VM-1-NIC-1')
+azw.associate_nic_with_asg('ASG-VM-2', 'VM-2-NIC-1')
 
 # Print the newly created NSG-SUB-2
 azw.print_nsg_rules('NSG-SUB-2')
