@@ -1,2 +1,2 @@
 # Azure
-Azure playground using Python SDK
+Azure playground using Terraform
