@@ -52,7 +52,7 @@ resource "azurerm_subnet" "vnet1-sub2" {
 }
 
 module "vm1" {
-  source               = "./vm_module"
+  source               = "../vm_module"
   name                 = "vm1"
   resource_group_name  = azurerm_resource_group.rg-we.name
   location             = azurerm_resource_group.rg-we.location
@@ -62,7 +62,7 @@ module "vm1" {
 }
 
 module "vm11" {
-  source               = "./vm_module"
+  source               = "../vm_module"
   name                 = "vm11"
   resource_group_name  = azurerm_resource_group.rg-we.name
   location             = azurerm_resource_group.rg-we.location
@@ -94,7 +94,7 @@ resource "azurerm_subnet" "vnet2-sub2" {
 }
 
 module "vm2" {
-  source               = "./vm_module"
+  source               = "../vm_module"
   name                 = "vm2"
   resource_group_name  = azurerm_resource_group.rg-ne.name
   location             = azurerm_resource_group.rg-ne.location
@@ -104,7 +104,7 @@ module "vm2" {
 }
 
 module "vm21" {
-  source               = "./vm_module"
+  source               = "../vm_module"
   name                 = "vm21"
   resource_group_name  = azurerm_resource_group.rg-ne.name
   location             = azurerm_resource_group.rg-ne.location
@@ -143,7 +143,7 @@ resource "azurerm_subnet" "vng1-sub2" {
 }
 
 module "vm100" {
-  source               = "./vm_module"
+  source               = "../vm_module"
   name                 = "vm100"
   resource_group_name  = azurerm_resource_group.rg-we.name
   location             = azurerm_resource_group.rg-we.location

@@ -1,0 +1,43 @@
+
+#############################
+Usefull show commands
+#############################
+
+
+az network vnet-gateway list --resource-group rg-we --output table
+
+az network vnet-gateway show --name vng1 --resource-group rg-we --query "bgpSettings.bgpPeeringAddresses" --output json
+
+az network vnet-gateway list-learned-routes --resource-group rg-we --name vng1 --output table
+
+az network nic show-effective-route-table --resource-group rg-we --name vm11-nic1
+
+az network vnet-gateway list-bgp-peer-status --name vng1 --resource-group rg-we --output table
+
+
+#############################
+Enable NAT on VM100
+#############################
+
+sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+sudo iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+sudo iptables -A FORWARD -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+sudo ip route add 10.0.0.0/8 via 10.255.2.1 dev eth1
+
+sudo sysctl -w net.ipv4.ip_forward=1
+
+
+
+
+##############
+##############
+
+
+
+
+
+
+
+
+

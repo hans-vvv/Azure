@@ -21,7 +21,7 @@ resource "azurerm_public_ip" "public_ip" {
   name                = "${var.name}-public-ip"
   location            = var.location
   resource_group_name = var.resource_group_name
-  allocation_method   = "Dynamic"
+  allocation_method   = "Dynamic"  
 }
 
 resource "azurerm_network_interface" "nic1" {
@@ -30,7 +30,8 @@ resource "azurerm_network_interface" "nic1" {
   resource_group_name = var.resource_group_name
 
   ip_configuration {
-    name                          = "${var.name}-ipconfig1"
+    # name                          = "${var.name}-ipconfig1"
+    name                          = "ipconfig1"
     subnet_id                     = element(var.subnet_ids, 0)
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = var.first_nic_public_ip == "yes" ? azurerm_public_ip.public_ip[0].id : null
@@ -44,7 +45,8 @@ resource "azurerm_network_interface" "nic2" {
   resource_group_name = var.resource_group_name
 
   ip_configuration {
-    name                          = "${var.name}-ipconfig2"
+    # name                          = "${var.name}-ipconfig2"
+    name                          = "ipconfig1"
     subnet_id                     = element(var.subnet_ids, 1)
     private_ip_address_allocation = "Dynamic"
   }
@@ -85,3 +87,11 @@ resource "azurerm_virtual_machine" "vm" {
     disable_password_authentication = false
   }
 }
+
+output "nic_ids" {
+  value = concat(
+    [azurerm_network_interface.nic1.id],
+    [for nic in azurerm_network_interface.nic2 : nic.id]
+  )
+}
+
