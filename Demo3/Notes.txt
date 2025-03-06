@@ -1,0 +1,175 @@
+VM2/VM3:
+sudo apt update
+sudo apt-get install strongswan
+
+VM2/VM3:
+sudo vi /etc/sysctl.conf
+net.ipv4.ip_forward=1
+sudo sysctl -p
+
+VM2/VM3:
+curl -s https://deb.frrouting.org/frr/keys.gpg | sudo tee /usr/share/keyrings/frrouting.gpg > /dev/null
+
+FRRVER="frr-stable"
+echo deb '[signed-by=/usr/share/keyrings/frrouting.gpg]' https://deb.frrouting.org/frr \
+     $(lsb_release -s -c) $FRRVER | sudo tee -a /etc/apt/sources.list.d/frr.list
+
+/etc/apt/sources.list.d/frr.list  --> In case of conflict only this must be present!
+deb [signed-by=/usr/share/keyrings/frrouting.gpg] https://deb.frrouting.org/frr bionic frr-stable
+
+sudo apt update
+sudo apt install frr
+sudo vtysh
+
+sudo vi /etc/frr/daemons
+bgpd=yes
+
+sudo systemctl restart frr
+
+sudo vi /etc/frr/zebra.conf
+interface eth0
+   ip address <your_ip_address> <netmask>
+
+sudo systemctl restart frr
+
+
+VW2:
+router bgp 65001
+ neighbor 10.2.0.4 remote-as 65002
+ neighbor 10.2.0.4 ebgp-multihop 2
+ !
+ address-family ipv4 unicast
+  network 10.3.0.0/24
+  neighbor 10.2.0.4 route-map permit-all in
+  neighbor 10.2.0.4 route-map permit-all out
+ exit-address-family
+exit
+!
+ip prefix-list permit-all seq 10 permit any
+!
+route-map permit-all permit 10
+ match ip address prefix-list permit-all
+exit
+
+# add route to BGP NH in kernel
+
+VM3:
+router bgp 65002
+ neighbor 10.3.0.4 remote-as 65001
+ neighbor 10.3.0.4 ebgp-multihop 2
+ !
+ address-family ipv4 unicast
+  network 10.2.0.0/24
+  network 10.2.1.0/24
+  neighbor 10.3.0.4 route-map permit-all in
+  neighbor 10.3.0.4 route-map permit-all out
+ exit-address-family
+exit
+!
+ip prefix-list permit-all seq 10 permit any
+!
+route-map permit-all permit 10
+ match ip address prefix-list permit-all
+exit
+
+# add route to BGP NH in kernel
+
+VM2:
+cd /etc
+
+hans@vm2:/etc$ sudo vi ipsec.conf
+config setup
+       charondebug="all"
+       uniqueids=yes
+       strictcrlpolicy=no
+
+conn vm2-to-vm3
+ authby=secret
+ leftid=13.80.252.203
+ leftsubnet=10.3.0.0/24
+ # leftsubnet=10.0.0.0/0
+ left=10.3.0.4
+ leftsourceip=10.3.0.4
+ # leftsourceip=%config
+ # rightsourceip=%config
+ right=13.81.171.183
+ # rightsubnet=10.2.0.0/24
+ rightsubnet=10.0.0.0/8
+ ike=aes256-sha2_256-modp1024
+ esp=aes256-sha2_256
+ keyexchange=ikev2
+ keyingtries=0
+ ikelifetime=1h
+ lifetime=8h
+ dpddelay=30
+ dpdtimeout=120
+ dpdaction=restart
+ auto=start
+ type=tunnel
+
+hans@vm2:/etc$ sudo vi ipsec.secrets
+13.80.252.203 13.81.171.183 : PSK "Test123"
+
+VM3:
+sudo vi /etc/ipsec.conf
+config setup
+       charondebug="all"
+       uniqueids=yes
+       strictcrlpolicy=no
+
+conn %default
+ ike=aes256-sha2_256-modp1024
+ esp=aes256-sha2_256
+ keyexchange=ikev2
+ keyingtries=0
+ ikelifetime=1h
+ lifetime=8h
+ dpddelay=30
+ dpdtimeout=120
+ dpdaction=restart
+ auto=start
+ type=tunnel
+
+
+conn vm3-to-vm2
+ authby=secret
+ left=10.2.0.4
+ leftid=13.81.171.183
+ # leftsubnet=10.2.1.0/24
+ leftsubnet=10.0.0.0/8
+ right=13.80.252.203
+ # rightsubnet=0.0.0.0/0
+ rightsubnet=10.3.0.0/24
+ rightsourceip=10.3.0.4
+ # leftsourceip=%config
+ # rightsourceip=%config
+
+
+hans@vm3:/etc$  sudo vi ipsec.secrets
+13.81.171.183 13.80.252.203 : PSK "Test123"
+
+
+##############
+##############
+
+Key points:
+- BGP NH reachability: add host routes on VMs which runs BGP
+- Add route on subnet of VM3 for 4.0.0.0/24 to 10.3.0.1
+- Enable IP forwarding in kernel and on NICs VM3.
+- Enable "branch-to-branch" on Route server.
+
+To do: Second NVA
+       Upgrade RM to support terraform RS
+
+#####################################
+#####################################
+
+VM3:
+
+sudo apt update
+sudo apt install wireguard-tools
+
+cd /etc/
+sudo chmod 755 wireguard/
+
+
