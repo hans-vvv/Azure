@@ -25,28 +25,42 @@ sudo apt-get update
 sudo apt-get install netcat
 sudo nc -lk -p 9191 &
 
-sudo route del 168.63.129.16
+# sudo route del 168.63.129.16
 
 
 # echo "100 eth0_table" | sudo tee -a /etc/iproute2/rt_tables
 echo "200 eth1_table" | sudo tee -a /etc/iproute2/rt_tables
 
 # sudo ip route add default via 10.0.0.1 dev eth0 table eth0_table
-sudo ip route add default via 10.0.1.1 dev eth1 table eth1_table
+sudo ip route add default via 10.1.1.1 dev eth1 table eth1_table
 
 # sudo iptables -t mangle -A PREROUTING -i eth0 -s 168.63.129.16 -d 10.0.0.5 -p tcp --dport 8181 -j MARK --set-mark 1
-sudo iptables -t mangle -A PREROUTING -i eth1 -s 168.63.129.16 -d 10.0.1.5 -p tcp --dport 9191 -j MARK --set-mark 2
+sudo iptables -t mangle -A PREROUTING -i eth1 -s 168.63.129.16 -d 10.1.1.4 -p tcp --dport 9191 -j MARK --set-mark 2  **** or 10.1.1.5
+
 
 # sudo ip rule add fwmark 1 table eth0_table
 sudo ip rule add fwmark 2 table eth1_table
 
 # sudo ip rule add from 10.0.0.5 table eth0_table
-sudo ip rule add from 10.0.1.5 table eth1_table
+sudo ip rule add from 10.1.1.4 table eth1_table  **** or 10.1.1.5
 
 sudo ip route flush cache
 
+
 #############################
+Enable NAT
 #############################
+
+
+sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+sudo iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+sudo iptables -A FORWARD -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+sudo ip route add 10.2.0.0/16 via 10.1.1.1 dev eth1
+
+
+
+
 
 
 
