@@ -1,0 +1,325 @@
+VM1/VM2/VM3:
+sudo apt update
+
+VM1/VM2/VM3:
+sudo vi /etc/sysctl.conf
+net.ipv4.ip_forward=1
+sudo sysctl -p
+
+#####################################
+#####################################
+
+VM1/2/VM3:
+
+sudo apt update
+sudo apt install wireguard-tools
+
+
+###############
+
+VM1/VM2
+
+cd /etc/
+sudo chmod 755 wireguard/
+
+VM1,pub = 13.81.24.249
+VM2,pub = 51.144.83.248
+
+VM1/2
+
+sudo su
+
+vi /etc/wireguard/wg0.conf
+
+[Interface]
+ListenPort = 51820
+Address = 172.31.1.1/30
+PrivateKey = <private key>
+Table = off
+
+
+[Peer]
+PublicKey = <public key>
+PreSharedKey = <pre-shared key>
+AllowedIPs = 0.0.0.0/0
+Endpoint = <public ip Network B>:51820
+PersistentKeepalive = 25
+
+VM1:
+
+sudo su
+wg genkey > wg0.key
+wg pubkey < wg0.key > wg0.pub
+wg genpsk > wg0.psk
+
+wg0.key -> IFJvGw/1KI5H/DDA186s5dlQCVS4jDItXdicrroYyVc=
+wg0.pub -> H2OZF9+fjqT1OlbjdyGO9051bIPJSMOTN2Vbdi7wllU=
+wg0.psk -> C/y93augB/GVWsOKqXHDQP31BjE2UTjtBLRRpwMzVsQ=
+
+sudo systemctl enable --now wg-quick@wg0.service
+
+VM2:
+
+wg genkey > wg0.key
+wg pubkey < wg0.key > wg0.pub
+
+wg0.key -> GJhv+wvYDnbyNKCkgCRYltfTsenXKIYWsGt097RT/Xw=
+wg0.pub -> Udfm2J8aW9TqpZYDfYvA9KTSrDpydyRtfU9K1HKwDlw=
+
+sudo systemctl enable --now wg-quick@wg0.service
+
+################
+
+VM1/VM3
+
+cd /etc/
+sudo chmod 755 wireguard/
+
+VM1,pub = 13.81.24.249
+VM3,pub = 13.80.179.87
+
+
+VM1/3
+
+sudo su
+
+vi /etc/wireguard/wg1.conf
+
+[Interface]
+ListenPort = 51821
+PrivateKey = <private key>
+Address = 172.31.1.5/30
+Table = off
+
+[Peer]
+PublicKey = <public key>
+PreSharedKey = <pre-shared key>
+AllowedIPs = 0.0.0.0/0
+Endpoint = <public ip Network B>:51821
+PersistentKeepalive = 25
+
+VM1:
+
+sudo su
+wg genkey > wg1.key
+wg pubkey < wg1.key > wg1.pub
+wg genpsk > wg1.psk
+
+wg1.key -> KL++cMTEsaefDRA/dhYHPt0ho4LWUrfF1ER80lkDynQ=
+wg1.pub -> 0gysF+RM4z+WWFrO1X82nWtLtAOo0LgiT6Kl+jTsXy8=
+wg1.psk -> MdId5gyM6ZabsADf3vgDCKP/kZkdHS3z00y/8yTHAZU=
+
+sudo systemctl enable --now wg-quick@wg1.service
+
+VM3:
+
+wg genkey > wg1.key
+wg pubkey < wg1.key > wg1.pub
+
+wg1.key -> sOuIOlCVBRHEaZp1jgQhOvXXzzjh8BlxVcqHzn6Pk0c=
+wg1.pub -> wwPdK8WL4uBcQSRHv8nvcul7fYbLul4lEbzUjIxxHlw=
+
+
+sudo systemctl enable --now wg-quick@wg1.service
+
+
+#####################################
+#####################################
+
+
+VM1/VM2/VM3:
+curl -s https://deb.frrouting.org/frr/keys.gpg | sudo tee /usr/share/keyrings/frrouting.gpg > /dev/null
+
+FRRVER="frr-stable"
+echo deb '[signed-by=/usr/share/keyrings/frrouting.gpg]' https://deb.frrouting.org/frr \
+     $(lsb_release -s -c) $FRRVER | sudo tee -a /etc/apt/sources.list.d/frr.list
+
+/etc/apt/sources.list.d/frr.list  --> In case of conflict only this must be present!
+deb [signed-by=/usr/share/keyrings/frrouting.gpg] https://deb.frrouting.org/frr bionic frr-stable
+
+sudo apt update
+sudo apt install frr
+
+sudo vi /etc/frr/daemons
+bgpd=yes
+
+sudo vi /etc/frr/zebra.conf
+interface eth0
+   ip address <your_ip_address> <netmask>
+
+sudo systemctl restart frr
+
+
+VW1:
+router bgp 65001
+ neighbor 172.31.1.2 remote-as 65010
+ neighbor 172.31.1.2 description VM2
+ neighbor 172.31.1.2 ebgp-multihop 2
+ neighbor 172.31.1.2 timers 10 30
+ neighbor 172.31.1.6 remote-as 65010
+ neighbor 172.31.1.6 description VM3
+ neighbor 172.31.1.6 timers 10 30
+ !
+ address-family ipv4 unicast
+  network 10.1.0.0/24
+  neighbor 172.31.1.2 route-map permit-all in
+  neighbor 172.31.1.2 route-map permit-all out
+  neighbor 172.31.1.6 route-map permit-all in
+  neighbor 172.31.1.6 route-map prepend out
+  maximum-paths 2
+ exit-address-family
+exit
+!
+ip prefix-list permit-all seq 10 permit any
+!
+route-map permit-all permit 10
+ match ip address prefix-list permit-all
+exit
+!
+route-map prepend permit 10
+ set as-path prepend 65001
+exit
+!
+end
+
+
+
+vm2:
+
+ip route 10.2.3.4/32 10.2.1.1
+ip route 10.2.3.5/32 10.2.1.1
+ip route 172.31.2.2/32 10.2.1.4
+!
+interface loopback0
+ ip address 172.31.2.1/32
+exit
+!
+router bgp 65010
+ neighbor 10.2.3.4 remote-as 65515
+ neighbor 10.2.3.4 description Azure Route Server
+ neighbor 10.2.3.4 ebgp-multihop
+ neighbor 10.2.3.4 timers 10 30
+ neighbor 10.2.3.5 remote-as 65515
+ neighbor 10.2.3.5 description Azure Route Server
+ neighbor 10.2.3.5 ebgp-multihop
+ neighbor 10.2.3.5 timers 10 30
+ neighbor 172.31.1.1 remote-as 65001
+ neighbor 172.31.1.1 description VM1
+ neighbor 172.31.1.1 timers 10 30
+ neighbor 172.31.2.2 remote-as 65010
+ neighbor 172.31.2.2 description VM3
+ neighbor 172.31.2.2 update-source 172.31.2.1
+ neighbor 172.31.2.2 timers 10 30
+ !
+ address-family ipv4 unicast
+  network 10.2.0.0/24
+  network 10.2.1.0/24
+  neighbor 10.2.3.4 route-map permit-all in
+  neighbor 10.2.3.4 route-map permit-all out
+  neighbor 10.2.3.5 route-map permit-all in
+  neighbor 10.2.3.5 route-map permit-all out
+  neighbor 172.31.1.1 route-map permit-all in
+  neighbor 172.31.1.1 route-map permit-all out
+  neighbor 172.31.2.2 next-hop-self
+ exit-address-family
+exit
+!
+ip prefix-list permit-all seq 10 permit any
+!
+route-map permit-all permit 10
+ match ip address prefix-list permit-all
+
+
+
+VM3:
+
+ip route 10.2.3.4/32 10.2.1.1
+ip route 10.2.3.5/32 10.2.1.1
+ip route 172.31.2.1/32 10.2.1.5
+!
+interface loopback0
+ ip address 172.31.2.2/32
+exit
+!
+router bgp 65010
+ neighbor 10.2.3.4 remote-as 65515
+ neighbor 10.2.3.4 description Azure Route Server
+ neighbor 10.2.3.4 ebgp-multihop
+ neighbor 10.2.3.4 timers 10 30
+ neighbor 10.2.3.5 remote-as 65515
+ neighbor 10.2.3.5 description Azure Route Server
+ neighbor 10.2.3.5 ebgp-multihop
+ neighbor 10.2.3.5 timers 10 30
+ neighbor 172.31.1.5 remote-as 65001
+ neighbor 172.31.1.5 description VM1
+ neighbor 172.31.1.5 timers 10 30
+ neighbor 172.31.2.1 remote-as 65010
+ neighbor 172.31.2.1 description VM2
+ neighbor 172.31.2.1 update-source 172.31.2.2
+ neighbor 172.31.2.1 timers 10 30
+ !
+ address-family ipv4 unicast
+  neighbor 10.2.3.4 route-map permit-all in
+  neighbor 10.2.3.4 route-map prepend out
+  neighbor 10.2.3.5 route-map permit-all in
+  neighbor 10.2.3.5 route-map prepend out
+  neighbor 172.31.1.5 route-map permit-all in
+  neighbor 172.31.1.5 route-map prepend out
+  neighbor 172.31.2.1 next-hop-self
+ exit-address-family
+exit
+!
+ip prefix-list permit-all seq 10 permit any
+!
+route-map permit-all permit 10
+ match ip address prefix-list permit-all
+exit
+!
+route-map prepend permit 10
+ set as-path prepend 65010
+exit
+
+
+
+######################
+VM2:
+sudo ip addr add 172.31.2.1/32 dev lo
+
+VM3:
+sudo ip addr add 172.31.2.2/32 dev lo
+
+
+ip addr show lo
+
+######################
+
+#####################################
+#####################################
+
+
+
+Key points:
+
+- Add UDRs for 172.31.2.1 and 172.31.2.2 in NICs
+- Enable IP forwarding in NICs VM2/3.
+- Enable "branch-to-branch" on Route server.
+
+#####################################
+#####################################
+
+
+ neighbor 10.2.3.4 shutdown 
+ neighbor 10.2.3.5 shutdown
+ neighbor 172.31.1.1 shutdown
+ neighbor 172.31.2.2 shutdown
+
+ no neighbor 10.2.3.4 shutdown 
+ no neighbor 10.2.3.5 shutdown
+ no neighbor 172.31.1.1 shutdown
+ no neighbor 172.31.2.2 shutdown
+
+ 
+
+
+
+
