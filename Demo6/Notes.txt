@@ -1,0 +1,122 @@
+Install on VM3:
+
+sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+sudo iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+sudo iptables -A FORWARD -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+sudo ip route add 10.0.0.0/8 via 10.2.2.1 dev eth1
+
+sudo sysctl -w net.ipv4.ip_forward=1
+
+sudo apt install conntrack
+
+
+#######################
+
+Install route table with UDR in Azure with 8.8.4.4/32 via 10.2.2.4 (inside interface of VM3)
+Add this route to vnet1-sub1 subnet
+
+Then perform ping on VM1 to 8.8.4.4
+
+#######################
+
+Then monitor NAT entry on VM3:
+
+hans@vm3:~$ sudo conntrack -L | grep "8.8.4.4"
+icmp     1 29 src=10.1.0.4 dst=8.8.4.4 type=8 code=0 id=2445 src=8.8.4.4 dst=10.2.1.4 type=0 code=0 id=2445 mark=0 use=1
+
+#######################
+
+Connectivity requirements
+
+VM1 can ping VM2 (Office to Azure connectivity)
+VM1 can ping Internet (Azure to Internet)
+
+hans@vm1:~$ ping 10.5.0.4
+PING 10.5.0.4 (10.5.0.4) 56(84) bytes of data.
+64 bytes from 10.5.0.4: icmp_seq=1 ttl=64 time=6.33 ms
+64 bytes from 10.5.0.4: icmp_seq=2 ttl=64 time=4.86 ms
+^C
+--- 10.5.0.4 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms
+rtt min/avg/max/mdev = 4.865/5.602/6.339/0.737 ms
+
+hans@vm1:~$ ping 8.8.4.4
+PING 8.8.4.4 (8.8.4.4) 56(84) bytes of data.
+64 bytes from 8.8.4.4: icmp_seq=1 ttl=115 time=3.24 ms
+64 bytes from 8.8.4.4: icmp_seq=2 ttl=115 time=2.19 ms
+64 bytes from 8.8.4.4: icmp_seq=3 ttl=115 time=3.14 ms
+^C
+
+#######################
+#######################
+
+Now disable peering between lng1 and lng3 (ExpressRoute)
+
+
+#######################
+
+BGP status on VNG1:
+Peer address Local address Asn    Status      Connected duration  Routes received    Messages sent     Messages Received
+10.4.0.253   10.2.0.254    65020  Connecting  -                   0
+
+Connectivity between VM1 and VM2 is broken:
+
+hans@vm1:~$ ping 10.5.0.4
+PING 10.5.0.4 (10.5.0.4) 56(84) bytes of data.
+^C
+--- 10.5.0.4 ping statistics ---
+4 packets transmitted, 0 received, 100% packet loss, time 3053ms
+
+
+The route 8.8.4.4 (Internet) is still working:
+
+hans@vm1:~$ ping 8.8.4.4
+PING 8.8.4.4 (8.8.4.4) 56(84) bytes of data.
+64 bytes from 8.8.4.4: icmp_seq=1 ttl=115 time=3.22 ms
+64 bytes from 8.8.4.4: icmp_seq=2 ttl=115 time=2.38 ms
+^C
+
+
+#######################
+
+Now enable Vnet peering between Vnet1 and Vnet3 and disable peering
+between Vnet1 and Vnet2
+
+--> This breaks connectivity because UDR next-hop is not accessibel!
+
+hans@vm1:~$ ping 8.8.4.4
+PING 8.8.4.4 (8.8.4.4) 56(84) bytes of data.
+^C
+--- 8.8.4.4 ping statistics ---
+5 packets transmitted, 0 received, 100% packet loss, time 4097ms
+
+
+So peering between Vnet1 and Vnet2 must be without remote GW capabilities!
+
+hans@vm1:~$ ping 8.8.4.4
+PING 8.8.4.4 (8.8.4.4) 56(84) bytes of data.
+64 bytes from 8.8.4.4: icmp_seq=1 ttl=115 time=2.53 ms
+64 bytes from 8.8.4.4: icmp_seq=2 ttl=115 time=3.69 ms
+64 bytes from 8.8.4.4: icmp_seq=3 ttl=115 time=3.70 ms
+^C
+
+
+#######################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
