@@ -79,7 +79,7 @@ PING 10.5.0.4 (10.5.0.4) 56(84) bytes of data.
 The BGP session between VNG1 and VNG2 can be queried using the GUI:
 ![image info](./media/Initial_BGP_info_VNG1.png)
 A few observations can be made from the screenshot:
-1. The BGP session between VNG1 and VNG3 is operational (status=Connected)
+1. The BGP session between VNG1 and VNG2 is operational (status=Connected)
 2. All supernets (10.1.0.0/16 till 10.5.0.0/16) from all Vnets are present in the BGP tables.
 
 ## Simulation of an ExpressRoute failure.
