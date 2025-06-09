@@ -217,7 +217,7 @@ resource "azurerm_virtual_network_peering" "vnet3-to-vnet1" {
 ```
 
 After applying the change, on VNG2 the prefix 10.1.0.0/16 is present in the BGP table now:
-![image info](./media/Complete_BGP_info_VNG2.png)
+![image info](./media/complete_BGP_info_VNG2.png)
 
 And connectivity between VM1 and VM2 is restored:
 ```
