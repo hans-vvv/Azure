@@ -132,7 +132,7 @@ rtt min/avg/max/mdev = 2.380/2.533/2.805/0.196 ms
 ## Connectivity restoration procedure.
 
 The IPsec/BGP tunnel between VNG2 and VNG3 has been setup upfront:
-![image info](./media/Initial_BGP_info_VNG2.png)
+![image info](./media/initial_BGP_info_VNG2.png)
 From the BGP tables it can be concluded that there is no connectivity between VM1 and VM2. The reason is that prefix
 10.1.0.0/16 is missing in the BGP table of VNG2. This is caused by the fact that there is no Vnet peering present
 between Vnet1 and Vnet3 yet. Before enabling this peering, the current peering between Vnet1 and Vnet2 must be changed.
