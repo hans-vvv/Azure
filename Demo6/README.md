@@ -20,7 +20,7 @@ This connection is used in case the ExpressRoute connection is unavailable.
 
 ## Connectivity requirements
 
-1. Azure resources must be able to reach resources on the Internet. In Vnet3 VM3 is used as NAT gateway. VM1 is 
+1. Azure resources must be able to reach resources on the Internet. In Vnet2 VM3 is used as NAT gateway. VM1 is 
 deployed with a public IP address. To avoid connectivity loss when an Azure default (0.0.0.0/0) User Defined Route is 
 used on the subnet where VM1 is located, a UDR with prefix 8.8.4.4/32 pointing to VM3 is used for testing purposes. 
 2. Azure resources in Vnet1 must be able to reach resources in Vnet5.
