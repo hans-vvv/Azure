@@ -1,7 +1,8 @@
-# ExpressRoute manual backup
+# IPsec based backup connection for primary ExpressRoute.
 
-In this POC lab a design is explored which could be used in a production environment to provide an IPsed based 
-backup connection from an Azure ExpressRoute connection.
+In this POC lab a design is explored which could be used in a production environment to implement an IPsed based 
+backup connection for a primary ExpressRoute object. To limit complexity of the design, the fail-over is performed
+manually.
 
 ## Introduction 
 
@@ -14,15 +15,16 @@ environment.
 - Vnet2: Represents an Azure hub containing an ExpressRoute VNG (Virtual Network Gateway) and an Internet NAT gateway 
 for Azure resources from Vnet1.
 - Vnet3: Represents an Azure hub containing an IPsec VNG. In this Vnet an IPsec based connection is terminated. 
-This connection is used in case the ExpressRoute connection is unavailable.
+This connection is used in case the ExpressRoute object is unavailable.
 - Vnet4: Represents the SD-WAN provider hub where both ExpressRoute and IPsec VPN are terminated.
 - Vnet5: Represents an SD-WAN connected office location.
 
 ## Connectivity requirements
 
-1. Azure resources must be able to reach resources on the Internet. In Vnet2 VM3 is used as NAT gateway. VM1 is 
-deployed with a public IP address. To avoid connectivity loss when an Azure default (0.0.0.0/0) User Defined Route is 
-used on the subnet where VM1 is located, a UDR with prefix 8.8.4.4/32 pointing to VM3 is used for testing purposes. 
+1. Azure resources must be able to reach resources on the Internet. In Vnet2, VM3 is used as NAT gateway. VM1 is 
+deployed with a public IP address. To avoid connectivity loss while testing when an Azure default (0.0.0.0/0)
+User Defined Route is used on the subnet where VM1 is located, a UDR with prefix 8.8.4.4/32 pointing to VM3 is used 
+instead for testing purposes. 
 2. Azure resources in Vnet1 must be able to reach resources in Vnet5.
 
 ## Initial lab environment
@@ -103,9 +105,8 @@ resource "azurerm_local_network_gateway" "lng1" {
   depends_on = [azurerm_virtual_network_gateway.vng3]
 }
 ```
-The BGP peering address is a non-existing address and will result in a disabled BGP peering:
+The BGP peering address is an unused IP address and will result in a non-operational BGP peering status:
 ![image info](./media/Disabled_BGP_info_VNG1.png)
-The status of the BGP peering has been transistioned from connected to connecting state. 
 
 Given the BGP status between VNG1 and VNG2, connectivity between VM1 and VM2 should be broken, but the connectivity
 between VM1 and 8.8.4.4 should be remained intact:
@@ -129,16 +130,16 @@ rtt min/avg/max/mdev = 2.380/2.533/2.805/0.196 ms
 ```
 
 
-## Connectivity restoration procedure.
+## Manually connectivity restoration procedure.
 
-The IPsec/BGP tunnel between VNG2 and VNG3 has been setup upfront:
+The IPsec/BGP tunnel between VNG2 and VNG3 has been set up upfront:
 ![image info](./media/initial_BGP_info_VNG2.png)
 From the BGP tables it can be concluded that there is no connectivity between VM1 and VM2. The reason is that prefix
 10.1.0.0/16 is missing in the BGP table of VNG2. This is caused by the fact that there is no Vnet peering present
 between Vnet1 and Vnet3 yet. Before enabling this peering, the current peering between Vnet1 and Vnet2 must be changed.
-This change must ensure that Vnet2 cannot be longer used as gateway for Vnet1. The peering cannot be removed, because 
-this will break the requirement of providing Internet connectivity for Azure resources, as the UDR next-hop of the 
-inside interface of VM3 must be present in the BGP table of Vnet1.
+This change must ensure that Vnet2 cannot be longer used as remote gateway for Vnet1. The peering cannot be removed, 
+because this will break the requirement of providing Internet connectivity for Azure resources, as the UDR next-hop 
+of the inside interface of VM3 must remain present in the BGP table of Vnet1.
 ```sh
 resource "azurerm_virtual_network_peering" "vnet1-to-vnet2" {
   name                      = "vnet1-to-vnet2"
@@ -167,7 +168,7 @@ resource "azurerm_virtual_network_peering" "vnet2-to-vnet1" {
 }
 ```
 
-The connectivity between VM1 and VM2 is still broken, but VM1 is still capable to reach resources via VM3:
+The connectivity between VM1 and VM2 is still broken, but VM1 is still able to reach 8.8.4.4 via VM3:
 ```
 hans@vm1:~$ ping 10.5.0.4
 PING 10.5.0.4 (10.5.0.4) 56(84) bytes of data.
