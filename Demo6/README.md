@@ -32,10 +32,10 @@ instead for testing purposes.
 The Azure objects are provisioned using Infrastructure As Code (IaC) with Terraform. The code to provide the initial 
 setup can be viewed [here](https://github.com/hans-vvv/Azure/blob/main/Demo6/main.tf). 
 
-After the lab has been setup, some other elements needs to be setup.
+After the lab has been set up, some other elements needs to be setup.
 
 First the NAT Gateway must be setup on Linux VM3:
-```sh
+```
 sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 sudo iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
 sudo iptables -A FORWARD -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT
@@ -84,12 +84,13 @@ A few observations can be made from the screenshot:
 1. The BGP session between VNG1 and VNG2 is operational (status=Connected)
 2. All supernets (10.1.0.0/16 till 10.5.0.0/16) from all Vnets are present in the BGP tables.
 
-## Simulation of an ExpressRoute failure.
-An ExpressRoute object is represented in Azure as a single object, although it consists of tho underlying leased lines
+## Simulation of an ExpressRoute VNG failure.
+An ExpressRoute VNG is represented in Azure as a single object, although it consists of two underlying leased lines
 to connect the Azure infrastructure to the customer equipment.
 
-To mimic an ExpressRoute failure, the following Terraform code is used to disable the BGP peer between VNG1 and VNG2:
-```sh
+To mimic an ExpressRoute VNG failure, the following Terraform code is used to disable the BGP peer between VNG1 and 
+VNG2:
+```
 resource "azurerm_local_network_gateway" "lng1" {
   name                = "lng1"
   location            = azurerm_resource_group.rg-we.location
@@ -130,7 +131,7 @@ rtt min/avg/max/mdev = 2.380/2.533/2.805/0.196 ms
 ```
 
 
-## Manually connectivity restoration procedure.
+## Manual connectivity restoration procedure.
 
 The IPsec/BGP tunnel between VNG2 and VNG3 has been set up upfront:
 ![image info](./media/initial_BGP_info_VNG2.png)
@@ -140,7 +141,7 @@ between Vnet1 and Vnet3 yet. Before enabling this peering, the current peering b
 This change must ensure that Vnet2 cannot be longer used as remote gateway for Vnet1. The peering cannot be removed, 
 because this will break the requirement of providing Internet connectivity for Azure resources, as the UDR next-hop 
 of the inside interface of VM3 must remain present in the BGP table of Vnet1.
-```sh
+```
 resource "azurerm_virtual_network_peering" "vnet1-to-vnet2" {
   name                      = "vnet1-to-vnet2"
   resource_group_name       = azurerm_resource_group.rg-we.name
@@ -189,7 +190,7 @@ rtt min/avg/max/mdev = 2.319/2.548/2.851/0.227 ms
 ```
 
 To restore the connectivity between VM1 and VM2, the following Vnet peering must be established between Vnet1 and Vnet3.
-```sh
+```
 resource "azurerm_virtual_network_peering" "vnet1-to-vnet3" {
   name                      = "vnet1-to-vnet3"
   resource_group_name       = azurerm_resource_group.rg-we.name
